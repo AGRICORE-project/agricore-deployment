@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: population-generator-svc
+  namespace: agricore
+spec:
+  selector:
+    app: population-generator
+  ports:
+    - port: 80
+      targetPort: 8888
+      protocol: TCP
+      name: http 
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tls-population-generator
+  namespace: agricore
+spec:
+  commonName: # TO_MODIFY: Replace with the correct domain name (e.g., population-generator.<your-domain>)
+  secretName: tls-population-generator
+  dnsNames:
+    - # TO_MODIFY: Replace with the correct domain name (e.g., population-generator.<your-domain>)
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: population-generator-ingress
+  namespace: agricore
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: # TO_MODIFY: Replace with the host rule (e.g., Host(<host-name>))
+      kind: Rule
+      services:
+        - name: population-generator-svc
+          port: 80
+  tls:
+    secretName: tls-population-generator

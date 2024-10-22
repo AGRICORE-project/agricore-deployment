@@ -1,0 +1,153 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: interface-postgres
+  namespace: agricore
+spec:
+  selector:
+    app: interface-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: interface-ldap
+  namespace: agricore
+spec:
+  selector:
+    app: interface-ldap
+  ports:
+    - port: 389
+      targetPort: 389
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: interface-backend
+  namespace: agricore
+spec:
+  selector:
+    app: interface-backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tls-interface-backend
+  namespace: agricore
+spec:
+  commonName: # TO_MODIFY: Replace with the correct domain name (e.g., interface-backend.agricore.<your-domain>)
+  secretName: tls-interface-backend
+  dnsNames:
+    - # TO_MODIFY: Replace with the correct domain name (e.g., interface-backend.agricore.<your-domain>)
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: interface-backend
+  namespace: agricore
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: # TO_MODIFY: Replace with the host rule (e.g., Host(<host-name>))
+      kind: Rule
+      services:
+        - name: interface-backend
+          port: 8080
+  tls:
+    secretName: tls-interface-backend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: interface-frontend
+  namespace: agricore
+spec:
+  selector:
+    app: interface-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tls-interface-frontend
+  namespace: agricore
+spec:
+  commonName: # TO_MODIFY: Replace with the correct domain name (e.g., interface.agricore.<your-domain>)
+  secretName: tls-interface-frontend
+  dnsNames:
+    - # TO_MODIFY: Replace with the correct domain name (e.g., interface.agricore.<your-domain>)
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: interface-frontend
+  namespace: agricore
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: # TO_MODIFY: Replace with the host rule (e.g., Host(<host-name>))
+      kind: Rule
+      services:
+        - name: interface-frontend
+          port: 80
+  tls:
+    secretName: tls-interface-frontend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: interface-phpldapadmin
+  namespace: agricore
+spec:
+  selector:
+    app: interface-phpldapadmin
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tls-interface-phpldapadmin
+  namespace: agricore
+spec:
+  commonName: # TO_MODIFY: Replace with the correct domain name (e.g., ldap.interface.agricore.<your-domain>)
+  secretName: tls-interface-phpldapadmin
+  dnsNames:
+    - # TO_MODIFY: Replace with the correct domain name (e.g., ldap.interface.agricore.<your-domain>)
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: interface-phpldapadmin
+  namespace: agricore
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: # TO_MODIFY: Replace with the host rule (e.g., Host(<host-name>))
+      kind: Rule
+      services:
+        - name: interface-phpldapadmin
+          port: 80
+  tls:
+    secretName: tls-interface-phpldapadmin
+

@@ -1,0 +1,325 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simulation-manager
+  namespace: agricore
+spec:
+  selector:
+    matchLabels:
+      app: simulation-manager
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: simulation-manager
+    spec:
+      containers:
+        - name: simulation-manager
+          image: # TO_MODIFY: Add Docker image for the simulation-manager
+          command: ["python3", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8004", "--reload"]
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8004
+          env:
+            - name: ORM_ENDPOINT
+              value: # TO_MODIFY: Add ORM endpoint URL
+            - name: CELERY_BROKER_URL
+              value: redis://:pass@redis-celery-svc:6379/0
+            - name: FINANCIAL_TOOLS_ENDPOINT
+              value: a
+            - name: GITHUB_TOKEN
+              value: # TO_MODIFY: Add GitHub token for private repository access
+            - name: LT_MODEL_REPOSITORY
+              value: AGRICORE-project/financial-optimization-module-long-term
+            - name: CELERY_INSTANCE_NAME
+              value: agricore
+      imagePullSecrets:
+        - name: # TO_MODIFY: Add image pull secret name for private Docker registry access
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simulation-manager-worker
+  namespace: agricore
+spec:
+  selector:
+    matchLabels:
+      app: simulation-manager-worker
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: simulation-manager-worker
+    spec:
+      containers:
+        - name: simulation-manager-worker
+          image: # TO_MODIFY: Add Docker image for simulation-manager worker
+          command: ["celery", "-A", "worker_simulation_manager.app", "worker", "-Q", "simulation_manager", "--concurrency=10", "-P", "threads", "-n", "simulation_manager_worker%h", "--loglevel=debug"]
+          imagePullPolicy: Always
+          env:
+            - name: ORM_ENDPOINT
+              value: # TO_MODIFY: Add ORM endpoint URL
+            - name: CELERY_BROKER_URL
+              value: redis://:pass@redis-celery-svc:6379/0
+            - name: FINANCIAL_TOOLS_ENDPOINT
+              value: a
+            - name: GITHUB_TOKEN
+              value: # TO_MODIFY: Add GitHub token for private repository access
+            - name: LT_MODEL_REPOSITORY
+              value: AGRICORE-project/financial-optimization-module-long-term
+            - name: CELERY_INSTANCE_NAME
+              value: agricore
+      imagePullSecrets:
+        - name: # TO_MODIFY: Add image pull secret name for private Docker registry access
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simulation-manager-long-term-worker
+  namespace: agricore
+spec:
+  selector:
+    matchLabels:
+      app: simulation-manager-long-term-worker
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: simulation-manager-long-term-worker
+    spec:
+      containers:
+        - name: simulation-manager-long-term-worker
+          image: # TO_MODIFY: Add Docker image for long-term worker
+          command: ["celery", "-A", "worker_long_term.app", "worker", "-Q", "long_term", "--concurrency=10", "-P", "threads", "-n", "long_term_worker%h", "--loglevel=debug", "--max-tasks-per-child=1"]
+          imagePullPolicy: Always
+          env:
+            - name: WORKERS_REPOSITORY
+              value: AGRICORE-project/simulation-manager
+            - name: LT_INSTALL_PATH
+              value: /opt/AGRICORE/long_term_worker
+            - name: ST_INSTALL_PATH
+              value: /opt/agricore-short-term-deploy/scheduler
+            - name: MODEL_MODE
+              value: LT
+            - name: ORM_ENDPOINT
+              value: # TO_MODIFY: Add ORM endpoint URL
+            - name: CELERY_BROKER_URL
+              value: redis://:pass@redis-celery-svc:6379/0
+            - name: FINANCIAL_TOOLS_ENDPOINT
+              value: a
+            - name: GITHUB_TOKEN
+              value: # TO_MODIFY: Add GitHub token for private repository access
+            - name: LT_MODEL_REPOSITORY
+              value: AGRICORE-project/financial-optimization-module-long-term
+            - name: CELERY_INSTANCE_NAME
+              value: agricore
+            - name: LT_DEPLOY_DIR
+              value: /tmp
+            - name: S3_BUCKET
+              value: # TO_MODIFY: Add S3 bucket name
+            - name: S3_ENDPOINT_URL
+              value: # TO_MODIFY: Add S3 endpoint URL
+            - name: S3_USERNAME
+              value: # TO_MODIFY: Add S3 username
+            - name: S3_ACCESS_KEY_ID
+              value: # TO_MODIFY: Add S3 access key ID
+            - name: S3_SECRET_ACCESS_KEY
+              value: # TO_MODIFY: Add S3 secret access key
+            - name: S3_REGION_NAME
+              value: # TO_MODIFY: Add S3 region name
+      imagePullSecrets:
+        - name: # TO_MODIFY: Add image pull secret name for private Docker registry access
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simulation-manager-solver-worker
+  namespace: agricore
+spec:
+  selector:
+    matchLabels:
+      app: simulation-manager-solver-worker
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: simulation-manager-solver-worker
+    spec:
+      containers:
+        - name: simulation-manager-scheduler-worker
+          image: # TO_MODIFY: Add Docker image for short-term scheduler worker
+          command: ["celery", "-A", "worker_short_term_scheduler.app", "worker", "-Q", "short_term_scheduler", "--concurrency=5", "-P", "prefork", "-n", "short_term_scheduler_worker%h", "--loglevel=debug"]
+          imagePullPolicy: Always
+          env:
+            - name: ST_DEPLOY_DIR
+              value: /tmp/agricore/scheduler
+            - name: GITHUB_TOKEN
+              value: # TO_MODIFY: Add GitHub token for private repository access
+            - name: ORM_ENDPOINT
+              value: # TO_MODIFY: Add ORM endpoint URL
+            - name: CELERY_BROKER_URL
+              value: redis://:pass@redis-celery-svc:6379/0
+            - name: CELERY_INSTANCE_NAME
+              value: agricore
+            - name: ST_MODEL_REPOSITORY
+              value: AGRICORE-project/model-short-period
+            - name: FINANCIAL_TOOLS_ENDPOINT
+              value: a
+            - name: S3_BUCKET
+              value: # TO_MODIFY: Add S3 bucket name
+            - name: S3_ENDPOINT_URL
+              value: # TO_MODIFY: Add S3 endpoint URL
+            - name: S3_USERNAME
+              value: # TO_MODIFY: Add S3 username
+            - name: S3_ACCESS_KEY_ID
+              value: # TO_MODIFY: Add S3 access key ID
+            - name: S3_SECRET_ACCESS_KEY
+              value: # TO_MODIFY: Add S3 secret access key
+            - name: S3_REGION_NAME
+              value: # TO_MODIFY: Add S3 region name
+          volumeMounts:
+            - name: shared-data
+              mountPath: /tmp/agricore/scheduler
+          resources:
+            requests:
+              memory: 128M
+              cpu: 0.1m
+            limits:
+              memory: 184Gi
+              cpu: 1000m
+        - name: simulation-manager-solver-worker
+          image: # TO_MODIFY: Add Docker image for short-term solver worker
+          command: ["celery", "-A", "worker_short_term_solver.app", "worker", "-Q", "short_term_solver", "--concurrency=5", "-P", "prefork", "-n", "short_term_solver_worker@%h", "--loglevel=debug", "--max-tasks-per-child=1"]
+          imagePullPolicy: Always
+          env:
+            - name: ST_DEPLOY_DIR
+              value: /tmp/agricore/solver
+            - name: GITHUB_TOKEN
+              value: # TO_MODIFY: Add GitHub token for private repository access
+            - name: ORM_ENDPOINT
+              value: # TO_MODIFY: Add ORM endpoint URL
+            - name: CELERY_BROKER_URL
+              value: redis://:pass@redis-celery-svc:6379/0
+            - name: CELERY_INSTANCE_NAME
+              value: agricore
+            - name: LT_DEPLOY_DIR
+              value: /tmp
+            - name: ST_MODEL_REPOSITORY
+              value: AGRICORE-project/model-short-period
+            - name: FINANCIAL_TOOLS_ENDPOINT
+              value: a
+            - name: S3_BUCKET
+              value: # TO_MODIFY: Add S3 bucket name
+            - name: S3_ENDPOINT_URL
+              value: # TO_MODIFY: Add S3 endpoint URL
+            - name: S3_USERNAME
+              value: # TO_MODIFY: Add S3 username
+            - name: S3_ACCESS_KEY_ID
+              value: # TO_MODIFY: Add S3 access key ID
+            - name: S3_SECRET_ACCESS_KEY
+              value: # TO_MODIFY: Add S3 secret access key
+            - name: S3_REGION_NAME
+              value: # TO_MODIFY: Add S3 region name
+          volumeMounts: 
+            - name: shared-data
+              mountPath: /tmp/agricore/solver
+            - name: gams-license
+              mountPath: /gams/gamslice.txt
+              subPath: gamslice.txt
+          resources:
+            requests:
+              memory: 64Gi
+              cpu: 2000m
+            limits:
+              memory: 184Gi
+              cpu: 40000m
+      volumes:
+        - name: gams-license
+          configMap:
+            name: gams-license
+            items:
+            - key: gamslice.txt
+              path: gamslice.txt
+        - name: shared-data
+          emptyDir: {}
+
+      imagePullSecrets:
+        - name: # TO_MODIFY: Add image pull secret name for private Docker registry access
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simulation-manager-long-term-worker
+  namespace: agricore
+spec:
+  selector:
+    matchLabels:
+      app: simulation-manager-long-term-worker
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: simulation-manager-long-term-worker
+    spec:
+      containers:
+        - name: simulation-manager-long-term-worker
+          image: # TO_MODIFY: Add Docker image for long-term worker
+          command: ["celery", "-A", "worker_long_term.app", "worker", "-Q", "long_term", "--concurrency=5", "-P", "threads", "-n", "long_term_worker%h", "--loglevel=debug"]
+          imagePullPolicy: Always
+          env:
+            - name: ORM_ENDPOINT
+              value: # TO_MODIFY: Add ORM endpoint URL
+            - name: CELERY_BROKER_URL
+              value: redis://:pass@redis-celery-svc:6379/0
+            - name: FINANCIAL_TOOLS_ENDPOINT
+              value: a
+            - name: GITHUB_TOKEN
+              value: # TO_MODIFY: Add GitHub token for private repository access
+            - name: LT_MODEL_REPOSITORY
+              value: AGRICORE-project/financial-optimization-module-long-term
+            - name: CELERY_INSTANCE_NAME
+              value: agricore
+            - name: LT_DEPLOY_DIR
+              value: /tmp
+      imagePullSecrets:
+        - name: # TO_MODIFY: Add image pull secret name for private Docker registry access
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simulation-manager-flower
+  namespace: agricore
+spec:
+  selector:
+    matchLabels:
+      app: simulation-manager-flower
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: simulation-manager-flower
+    spec:
+      containers:
+        - name: simulation-manager-flower
+          image: # TO_MODIFY: Add Docker image for Flower worker
+          command: ["celery", "-A", "flower_dashboard.app", "flower", "--port=5555", "--debug=True"]
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 5555
+          env:
+            - name: ORM_ENDPOINT
+              value: # TO_MODIFY: Add ORM endpoint URL
+            - name: CELERY_BROKER_URL
+              value: redis://:pass@redis-celery-svc:6379/0
+            - name: FINANCIAL_TOOLS_ENDPOINT
+              value: a
+            - name: GITHUB_TOKEN
+              value: # TO_MODIFY: Add GitHub token for private repository access
+            - name: LT_MODEL_REPOSITORY
+              value: AGRICORE-project/financial-optimization-module-long-term
+            - name: CELERY_INSTANCE_NAME
+              value: agricore
+      imagePullSecrets:
+        - name: # TO_MODIFY: Add image pull secret name for private Docker registry access

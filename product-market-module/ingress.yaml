@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-market-module
+  namespace: agricore
+spec:
+  selector:
+    app: product-market-module
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tls-product-market-module
+  namespace: agricore
+spec:
+  commonName: # TO_MODIFY: Replace with the correct domain name (e.g., product-market-module.<your-domain>)
+  secretName: tls-product-market-module
+  dnsNames:
+    - # TO_MODIFY: Replace with the correct domain name (e.g., product-market-module.<your-domain>)
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: product-market-module
+  namespace: agricore
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: # TO_MODIFY: Replace with the host rule (e.g., Host(<host-name>))
+      kind: Rule
+      services:
+        - name: product-market-module
+          port: 8000
+  tls:
+    secretName: tls-product-market-module

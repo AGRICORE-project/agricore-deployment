@@ -1,0 +1,30 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: superset-cert
+  namespace: superset
+spec:
+  commonName: # TO_MODIFY: replace with the common name
+  secretName: superset-tls
+  dnsNames:
+    - # TO_MODIFY: replace with DNS name
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: superset-ingress
+  namespace: superset
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: # TO_MODIFY: replace with host rule
+      services:
+        - name: superset
+          port: 8088
+  tls:
+    secretName: superset-tls

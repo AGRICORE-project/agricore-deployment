@@ -1,0 +1,85 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: simulation-manager-svc
+  namespace: agricore
+spec:
+  selector:
+    app: simulation-manager
+  ports:
+    - port: 8004
+      targetPort: 8004
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: simulation-manager-flower-svc
+  namespace: agricore
+spec:
+  selector:
+    app: simulation-manager-flower
+  ports:
+    - port: 5555
+      targetPort: 5555
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tls-simulation-manager
+  namespace: agricore
+spec:
+  commonName:  # TO_MODIFY: Replace with the correct common name
+  secretName: tls-simulation-manager
+  dnsNames:
+    -  # TO_MODIFY: Replace with the correct DNS name
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: simulation-manager-ingress
+  namespace: agricore
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match:  # TO_MODIFY: Replace with the correct host
+      kind: Rule
+      services:
+        - name: simulation-manager-svc
+          port: 8004
+  tls:
+    secretName: tls-simulation-manager
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tls-simulation-manager-flower
+  namespace: agricore
+spec:
+  commonName:  # TO_MODIFY: Replace with the correct common name
+  secretName: tls-simulation-manager-flower
+  dnsNames:
+    -  # TO_MODIFY: Replace with the correct DNS name
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: simulation-manager-flower-ingress
+  namespace: agricore
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match:  # TO_MODIFY: Replace with the correct host
+      kind: Rule
+      services:
+        - name: simulation-manager-flower-svc
+          port: 5555
+  tls:
+    secretName: tls-simulation-manager-flower

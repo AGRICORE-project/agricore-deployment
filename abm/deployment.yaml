@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: abm
+  namespace: agricore
+spec:
+  selector:
+    matchLabels:
+      app: abm
+  template:
+    metadata:
+      labels:
+        app: abm
+    spec:
+      containers:
+        - name: abm
+          image: # TO_MODIFY: Replace with the container image (e.g., <registry>/<image>:<tag>)
+          imagePullPolicy: Always
+          env:
+            - name: POSTGRES_CONNECTIONSTRING
+              value: "Host=abm-postgres.agricore.svc.cluster.local;Port=5432;Database=agricore-abm;Username=username;Password=pass;Include Error Detail=true;Timeout=120;Command Timeout=300;Read Buffer Size=16384;Write Buffer Size=16384"
+            - name: "ASPNETCORE_ENVIRONMENT"
+              value: "Development"
+            - name: "ASPNETCORE_FORWARDEDHEADERS_ENABLED"
+              value: "true"
+            - name: "ENABLE_ALL_ORIGINS_CORS"
+              value: "true"
+            - name: "ENABLE_SENSITIVE"
+              value: "true"
+            - name: "SIMULATION_MANAGER_BASE"
+              value: # TO_MODIFY: Replace with the base URL of the simulation manager (e.g., https://<simulation-manager-url>/)
+            # Enable to force https (don't use it if terminating https at reverse proxy)
+            # - name: "FORCE_HTTPS"
+            #   value: "true"
+      imagePullSecrets:
+        - name: # TO_MODIFY: Replace with the image pull secret name (e.g., <secret-name>)
+---
+# Postgres deployment 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: abm-postgres
+  namespace: agricore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: abm-postgres
+  template:
+    metadata:
+      labels:
+        app: abm-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:13
+          env:
+            - name: POSTGRES_USER
+              value: username
+            - name: POSTGRES_PASSWORD
+              value: pass
+            - name: POSTGRES_DB
+              value: agricore-abm
+          volumeMounts:
+            - name: abm-postgres-vol
+              mountPath: /var/lib/postgresql/data
+            - mountPath: /dev/shm
+              name: dshm
+          resources:
+            requests:
+              memory: "8Gi"
+              cpu: "1"
+            limits:
+              memory: "64Gi"
+              cpu: "6"
+      volumes:
+        - name: abm-postgres-vol
+          persistentVolumeClaim:
+            claimName: abm-postgres-pvc
+        - name: dshm
+          emptyDir:
+            medium: Memory

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-monitor
+  namespace: agricore
+spec:
+  selector:
+    matchLabels:
+      app: service-monitor
+  template:
+    metadata:
+      labels:
+        app: service-monitor
+    spec:
+      containers:
+        - name: service-monitor
+          image: # TO_MODIFY: Replace with the correct image path
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            - name: POSTGRES_CONNECTIONSTRING
+              value: "Host=service-monitor-postgres.agricore.svc.cluster.local;Port=5432;Database=service-monitor;Username=agricore;Password=pass"
+      imagePullSecrets:
+        - name: # TO_MODIFY: Replace with the correct image pull secret name
+
+---

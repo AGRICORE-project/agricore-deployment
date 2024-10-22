@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: abm-svc
+  namespace: agricore
+spec:
+  selector:
+    app: abm
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tls-abm
+  namespace: agricore
+spec:
+  commonName: # TO_MODIFY: Replace with the correct domain name (e.g., abm.agricore.<your-domain>)
+  secretName: tls-abm
+  dnsNames:
+    - # TO_MODIFY: Replace with the correct domain name (e.g., abm.agricore.<your-domain>)
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: abm-ingress
+  namespace: agricore
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: # TO_MODIFY: Replace with the host rule (e.g., Host(`<host-name>`))
+      kind: Rule
+      services:
+        - name: abm-svc
+          port: 80
+  tls:
+    secretName: tls-abm
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: abm-postgres
+  namespace: agricore
+spec:
+  selector:
+    app: abm-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432

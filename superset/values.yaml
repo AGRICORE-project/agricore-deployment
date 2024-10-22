@@ -1,0 +1,15 @@
+configOverrides:
+  # generate with `openssl rand -hex 32`
+  secret: |
+    SECRET_KEY = # TO_MODIFY: replace with the secret key
+
+init:
+  createAdmin: true
+  adminUser:
+    username: admin
+    firstname: AGRICORE
+    lastname: Admin
+    email: # TO_MODIFY: replace with admin email
+
+extraEnv:
+  TALISMAN_ENABLED: "False"

@@ -1,0 +1,191 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: interface-frontend
+  namespace: agricore
+  labels:
+    app: interface-module
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: interface-frontend
+  template:
+    metadata:
+      labels:
+        app: interface-frontend
+    spec:
+      containers:
+        - name: interface-frontend
+          image: # TO_MODIFY: Replace with the correct image (e.g., registry.<your-registry>/<your-image>:<tag>)
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            - name: BACKEND_HOST
+              value: interface-backend.agricore.svc.cluster.local
+            - name: BACKEND_PORT
+              value: "8080"
+      imagePullSecrets:
+        - name: # TO_MODIFY: Replace with the correct image pull secret name
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: interface-backend
+  namespace: agricore
+  labels:
+    app: interface-module
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: interface-backend
+  template:
+    metadata:
+      labels:
+        app: interface-backend
+    spec:
+      containers:
+        - name: interface-backend
+          image: # TO_MODIFY: Replace with the correct image (e.g., registry.<your-registry>/<your-image>:<tag>)
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: DB_HOST
+              value: interface-postgres.agricore.svc.cluster.local
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: ardit_interface
+            - name: DB_USER
+              value: agricore
+            - name: DB_PASSWORD
+              value: pass
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+            - name: LDAP_URL
+              value: ldap://interface-ldap.agricore.svc.cluster.local:389
+            - name: LDAP_PASSWORD
+              value: admin
+            - name: COOKIE_DOMAIN
+              value: # TO_MODIFY: Replace with the correct cookie domain (e.g., <your-domain>)
+      imagePullSecrets:
+        - name: # TO_MODIFY: Replace with the correct image pull secret name
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: interface-ldap
+  namespace: agricore
+spec:
+  selector:
+    matchLabels:
+      app: interface-ldap
+  template:
+    metadata:
+      labels:
+        app: interface-ldap
+    spec:
+      containers:
+        - name: interface-ldap
+          image: osixia/openldap:1.4.0
+          command: ["/bin/sh"]
+          args: ["-c", "/container/tool/run --copy-service -l debug"]
+          ports:
+            - name: ldap
+              containerPort: 389
+            - name: ldaps
+              containerPort: 636
+          env:
+            - name: LDAP_DOMAIN
+              value: # TO_MODIFY: Replace with the correct LDAP domain (e.g., <your-domain>)
+            - name: LDAP_ADMIN_PASSWORD
+              value: admin
+          volumeMounts:
+            - name: ldap-data-vol
+              mountPath: /var/lib/ldap
+            - name: ldap-config-vol
+              mountPath: /etc/ldap/slapd.d
+            - name: ldap-ldif-vol
+              mountPath: /container/service/slapd/assets/config/bootstrap/ldif/
+      volumes:
+      - name: ldap-data-vol
+        persistentVolumeClaim:
+          claimName: ldap-data-pvc
+      - name: ldap-config-vol 
+        persistentVolumeClaim:
+          claimName: ldap-config-pvc
+      - name: ldap-ldif-vol
+        configMap:
+          name: ldap-ldif-config
+          items:
+          - key: dev.ldif
+            path: dev.ldif
+
+---
+apiVersion: apps/v1
+kind: Deployment  
+metadata: 
+  name: interface-phpldapadmin
+  namespace: agricore
+spec:
+  selector:
+    matchLabels:
+      app: interface-phpldapadmin
+  template:
+    metadata:
+      labels:
+        app: interface-phpldapadmin
+    spec:
+      containers:
+        - name: interface-phpldapadmin
+          image: osixia/phpldapadmin:0.9.0
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            - name: PHPLDAPADMIN_LDAP_HOSTS
+              value: interface-ldap.agricore.svc.cluster.local
+            - name: PHPLDAPADMIN_HTTPS
+              value: "false"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: interface-postgres
+  namespace: agricore
+spec:
+  selector:
+    matchLabels:
+      app: interface-postgres
+  template:
+    metadata:
+      labels:
+        app: interface-postgres
+    spec:
+      containers:
+        - name: interface-postgres
+          image: postgres:11
+          env:
+            - name: TZ
+              value: Europe/Madrid
+            - name: POSTGRES_DB
+              value: ardit_interface
+            - name: POSTGRES_USER
+              value: agricore
+            - name: POSTGRES_PASSWORD
+              value: pass
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: interface-postgres-vol
+      volumes:
+        - name: interface-postgres-vol
+          persistentVolumeClaim:
+            claimName: interface-postgres-pvc

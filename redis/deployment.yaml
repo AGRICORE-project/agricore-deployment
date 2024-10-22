@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-celery-broker
+  namespace: agricore
+spec:
+  selector:
+    matchLabels:
+      app: redis-celery-broker
+  template:
+    metadata:
+      labels:
+        app: redis-celery-broker
+    spec:
+      containers:
+        - name: redis-celery-broker
+          image: bitnami/redis:latest
+          env:
+            - name: REDIS_PASSWORD
+              value: "pass"
+            - name: REDIS_AOF_ENABLED
+              value: "no"
+          
+

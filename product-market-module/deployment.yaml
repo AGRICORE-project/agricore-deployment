@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-market-module
+  namespace: agricore
+spec:
+  selector:
+    matchLabels:
+      app: product-market-module
+  template:
+    metadata:
+      labels:
+        app: product-market-module
+    spec:
+      containers:
+        - name: product-market-module
+          image: # TO_MODIFY: Replace with the correct image path (e.g., <registry-path>/product-market-module:<tag>)
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+      imagePullSecrets:
+        - name: # TO_MODIFY: Replace with the appropriate registry secret name
